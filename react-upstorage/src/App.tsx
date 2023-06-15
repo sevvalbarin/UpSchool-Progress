@@ -1,62 +1,84 @@
 import './App.css'
 import NavBar from './components/NavBar.tsx';
-import { ToastContainer } from 'react-toastify';
+import {ToastContainer} from 'react-toastify';
 import {Container} from "semantic-ui-react";
 import {Route, Routes} from "react-router-dom";
 import PasswordGeneratorPage from "./pages/PasswordGeneratorPage.tsx";
 import AccountsPage from "./pages/AccountsPage.tsx";
 import NotFoundPage from "./pages/NotFoundPage.tsx";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {AccountGetAllDto} from "./types/AccountTypes.ts";
-import {LocalUser} from "./types/AuthTypes.ts";
+import {LocalJwt, LocalUser} from "./types/AuthTypes.ts";
 import LoginPage from "./pages/LoginPage.tsx";
-
-const dummyAccounts:AccountGetAllDto[] = [
-    {
-        Id:"12345",
-        Title:"Yemek Sepeti",
-        Url:"www.yemeksepeti.com",
-        IsFavourite:false,
-        UserId:"iamthebestdeveloper",
-        UserName:"alpertunga",
-        Password:"123alper132",
-        Categories:[],
-        ShowPassword:false,
-    },
-    {
-        Id:"123456",
-        Title:"Getir",
-        Url:"www.getir.com",
-        IsFavourite:false,
-        UserId:"iamthebestdeveloper",
-        UserName:"alpertunga",
-        Password:"123alper132",
-        Categories:[],
-        ShowPassword:false,
-    }
-];
+import {getClaimsFromJwt} from "./utils/jwtHelper.ts";
+import {useNavigate} from "react-router-dom";
+import {AppUserContext, AccountsContext} from "./context/StateContext.tsx";
+import {dummyAccounts} from "./utils/dummyData.ts";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 function App() {
 
-    const [accounts,setAccounts] = useState<AccountGetAllDto[]>(dummyAccounts);
+    const navigate = useNavigate();
+
+    const [accounts, setAccounts] = useState<AccountGetAllDto[]>(dummyAccounts);
 
     const [appUser, setAppUser] = useState<LocalUser | undefined>(undefined);
 
+    useEffect(() => {
+
+        const jwtJson = localStorage.getItem("upstorage_user");
+
+        if (!jwtJson) {
+            navigate("/login");
+            return;
+        }
+
+        const localJwt: LocalJwt = JSON.parse(jwtJson);
+
+        const {uid, email, given_name, family_name} = getClaimsFromJwt(localJwt.accessToken);
+
+        const expires: string = localJwt.expires;
+
+        setAppUser({
+            id: uid,
+            email,
+            firstName: given_name,
+            lastName: family_name,
+            expires,
+            accessToken: localJwt.accessToken
+        });
+
+
+    }, []);
+
     return (
         <>
-            <ToastContainer/>
-            <NavBar accounts={accounts} appUser={appUser}/>
-            <Container className="App">
-            <Routes>
-                <Route path="/" element={<PasswordGeneratorPage />} />
-                <Route path="/accounts" element={<AccountsPage accounts={accounts} setAccounts={setAccounts} />} />
-                <Route path="/login" element={<LoginPage setAppUser={setAppUser} />} />
-                <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-            </Container>
+            <AppUserContext.Provider value={{appUser, setAppUser}}>
+                <AccountsContext.Provider value={{accounts, setAccounts}}>
+                    <ToastContainer/>
+                    <NavBar />
+                    <Container className="App">
+                        <Routes>
+                            <Route path="/" element={
+                                <ProtectedRoute>
+                                    <PasswordGeneratorPage/>
+                                </ProtectedRoute>
+                            }/>
+                            <Route path="/accounts" element={
+                                <ProtectedRoute>
+                                    <AccountsPage />
+                                </ProtectedRoute>
+                            }/>
+                            <Route path="/login" element={<LoginPage/>}/>
+                            <Route path="*" element={<NotFoundPage/>}/>
+                        </Routes>
+                    </Container>
+                </AccountsContext.Provider>
+            </AppUserContext.Provider>
         </>
     )
 
 }
+
 
 export default App

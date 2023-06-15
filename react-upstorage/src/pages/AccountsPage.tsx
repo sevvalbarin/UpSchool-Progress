@@ -1,23 +1,34 @@
-import {AccountGetAllDto} from "../types/AccountTypes.ts";
-import {useEffect} from "react";
+import {useContext, useEffect} from "react";
 import {Button, Divider, Grid, Header, Icon, Input, Segment, Select} from "semantic-ui-react";
 import "./AccountsPage.css";
 import AccountCard from "../components/AccountCard.tsx";
-
+import {AccountsContext} from "../context/StateContext.tsx";
+import api from "../utils/axiosInstance.ts";
 
 const options = [
     { key: '1', text: 'Ascending', value: 'true' },
     { key: '2', text: 'Descending', value: 'false' }
 ];
 
-export type AccountsPageProps = {
-    accounts:AccountGetAllDto[],
-    setAccounts:(accounts:AccountGetAllDto[]) => void;
-}
+/*export type AccountsPageProps = {
 
-function AccountsPage( { accounts,setAccounts }:AccountsPageProps ) {
+}*/
+
+function AccountsPage( ) {
+
+    const { accounts, setAccounts } = useContext(AccountsContext);
 
     useEffect(() => {
+
+        const fetchAccounts =async () => {
+            
+            const response = await api.get("/Accounts");
+
+            setAccounts(response.data.items);
+            
+        }
+
+        fetchAccounts();
 
         return;
 
@@ -73,7 +84,7 @@ function AccountsPage( { accounts,setAccounts }:AccountsPageProps ) {
             <Divider section />
             <Grid columns={3} stackable>
                 {accounts.map((account, index) =>(
-                    <AccountCard account={account} index={index} onPasswordVisibilityToggle={onPasswordVisibilityToggle}
+                    <AccountCard key ={index} account={account} index={index} onPasswordVisibilityToggle={onPasswordVisibilityToggle}
                                  onEditButtonClick={onEditButtonClick} onDeleteButtonClick={onDeleteButtonClick} />
                 ))}
             </Grid>
